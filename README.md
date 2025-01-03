@@ -2,7 +2,8 @@
 
 Andrew Ng - Deep Learning specialization (https://developers.google.com/machine-learning/glossary?hl=ko#weight)
 
-fastcampus 강의
+fastcampus 강의<br>
+1 -  파이썬으로 할 수 있는 모든것 with 47개 프로젝트 초격차 패키지 Online
 
 * 알고리즘 : 어떤 문제를 해결하거나 계산 시 수행되는 명확한 명령문의 나열<br>
   ㄴ정해진 초기값과 데이터를 시작으로 유명한 시행 횟수를 거쳐 출력값을 생성
@@ -103,5 +104,22 @@ def quick_sort(arr):
 ㄴ 함수가 자기 자신을 호출하여 문제를 해결하는 알고리즘<br>
 ㄴ 재귀함수는 반드시 종료조건이 있어야 함 / 문제를 더 작은 단위로 나누고, 결과를 결합하여 문제를 해결 / 피보나치 수열 구하기 : F(n) = F(n-1) + F(n-2)<br>
 
-* 알고리즘 트레이닝 사이트
-백준 / 프로그래머스 / Codility / LeetCode
+* 알고리즘 트레이닝 사이트<br>
+백준 / 프로그래머스 / Codility / LeetCode<br>
+
+예외처리의 구조<br>
+ㄴ try - except - else - finally 구조<br>
+ㄴ try : 예외가 일어날 수 있는 코드 / except : 예외가 일어나면 실행될 코드 / else : 예외가 없을 때 실행될 코드 / finally : 예외 발생 여부와 무관하게 마지막에 실행될 코드<br>
+```python
+try:
+  value = int("abc")
+except ValueError:
+  print("숫자로 변환할 수 없는 문자열입니다.")
+except ZeroDivisionError:
+  print("0으로 나눌 수 없습니다.")
+else:
+  print("변환이 완료됐습니다")
+finally:
+  print("프로그램을 종료합니다.")
+```
+
