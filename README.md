@@ -124,5 +124,47 @@ finally:
 ```
 
 ------- 초격차 패키지: 50개 프로젝트로 완벽하게 끝내는 머신러닝 SIGNATURE<br>
+* 머신러닝으로 어떤문제를 푸는가?<br>
+1) Forecast<br>
+: 주로 Time series data / 변수들간의 인과관계를 분석하여 미래를 예측 / 대표적 알고리즘은 AR(I)MA, DeepAR 등이 상용 수준으로 쓰임<br>
+2) Recommendation<br>
+: Netflix Prize를 통해 추천 연구 분야가 널리 알려짐. / Collaborative Filtering / Contetnt based Filtering<br>
+ㄴ 현실 뎅이터는 희소성 문제가 커서 알고리즘 적용이 어렵다 >> Matrix Factorization & Factorization Machine이 대표적으로 시도되는 방법<br>
+3) Anomaly Detection<br>
+: Normal을 벗어나는 데이터를 찾는 문제. 단순히 Outlier detection / Out-of-Distribution / One Class Classification 등 다양한 방법으로 접근<br>
+4) Image Processing <br>
+: Main task - Classification / Localization / Object Detection / Instance Segmentation <br>
+ㄴ 연구는 독립적으로 이루어지지만, 현업에서는 sub task와 혼합하여 사용<br>
+ㄴ 양품/불량품 자동 판정 모델 이용 / OCR(Optical Character Recognition)을 활용하여 아날로그 -> 디지털 전환에 편리성 제공<br>
+5) NLP <br>
+: 컴퓨터가 인간의 언어를 처리하는 모든 기술을 의미 <br>
+ㄴ 대표 Task : 감성 분석, 대화생성(챗봇), STT(speech to text)<br>
+ㄴ 제품 리뷰의 Negative 비율을 관리하여 상품 평판 관리 / CS 업무 중 반복적인 질문 등에 대한 자동 응대 / 다양한 미디어 매체의 데이터에서 부정적 의견을 모니터링해서 회사에 대한 평판관리
+
+
 virtual metrology 모델을 통해 샘플링 되지 않은 웨이퍼 칩의 계측 값을 예측<br>
-ㄴ 센서에서 수집되는 데이터 : 설명변수(x) / 실제 계측 값 : 반응변수(y)
+ㄴ 센서에서 수집되는 데이터 : 설명변수(x) / 실제 계측 값 : 반응변수(y)<br>
+
+현업 문제해결 유형별 머신러닝 알고리즘<br>
+1) eXplainable Method<br>
+- Black box : 내부 구조나 작동 원리를 몰라도 입력과 출력을 할 수 있는 장치나 회로 또는 과정<br>
+ㄴ eXplainable Artificial Intelligence (xAI)<br>
+ㄴ (1) Grad-CAM : Visual Explanations from Deep Networks via Gradient-based Localization<br>
+ㄴ (2) Linear Regression / Logistic Regression / Generalizaed Linear Models / Generalized Additive Models / Decision Tree, Naive Bayes Classifier, K-Nearest Neighbors / Local Model-Agnostic Methods (LIME, SHAP)<br>
+
+- Linear Regression : 오차의 선형성, 독립성, 등분산성, 정규성의 가정을 가짐<br>
+ㄴ 가정1 : 종속변수와 독립변수들 간의 선형성이 보장되어야 함 / 가정2 : 독립변수들 사이에 선형관계 없음 (Correlation) / 가정3 : 독립변수는 오차항과 상관이 없음 / 가정4 : 오차항들은 서로 독립적이며 서로 연관되어 있지 않음 / 가정5 : 오차항의 평균은 0 / 가정6 : 오차항의 분산은 일정<br>
+== "BLUE : Best Linear Unbiased Estimator"<br>
+- Generalized Linear Models : 기존의 Linear Regression에서 종속변수의 분포를 정규 분포를 포함한 여러 분포로 확장<br>
+ㄴ 기존 종속변수 평균과 독립변수의 선형 관계를 종속변수 평균의 함수와 독립변수의 선형관계로 확장한 모형<br>
+- Generalized Additive Models : X 각각에 비선형 함수 f를 적합할 수 있기 때문에 Linear Regression으로 학습하지 못하는 비선형 관계를 학습할 수 있음<br>
+- Naive Bayes Classifier <br>
+
+
+** 랜덤 포레스트에서 변수의 중요도가 높다면, <br>
+- Random permutation 전-후의 OOB Error 차이가 크게 나타나야 하며, 그 차이의 편차가 적어야함<br>
+
+
+
+
+
