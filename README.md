@@ -160,6 +160,36 @@ virtual metrology 모델을 통해 샘플링 되지 않은 웨이퍼 칩의 계�
 - Generalized Additive Models : X 각각에 비선형 함수 f를 적합할 수 있기 때문에 Linear Regression으로 학습하지 못하는 비선형 관계를 학습할 수 있음<br>
 - Naive Bayes Classifier <br>
 
+Global vs Local Feature Importance Score <br>
+* 기존 분석의 중요인자 추출 기법은 전체 데이터를 대변하는 중요 인자를 추출함<br>
+* 데이터 분석의 목적에서 특정 Y(Local, 고효율) 군을 결정 짓는 중요 인자를 추출할 수 있음<br>
+* 더 나아가 0.01%(불량 등) 데이터를 결정짓는 중요 인자를 추출<br>
+* 전체 Y를 대변하는 중요 인자(global Interpretability)와 특정 데이터에 대한 중요 인자 (Local Interpretability)는 다른 결과를 불러올 수 있음<br>
+* 특정 Y(내가 원하는 데이터)에 대한 해석력을 얻기 위해서는 Black Box Model을 열어봐야 함<br>
+* Interpretable Machine Learning(IML)을 통해 Black Box Model을 열어봄<br>
+
+Local Model-Agnostic Methods : LIME, SHAP<br>
+
+1-1) LIME <br>
+* Local Interpretable Model-agnostic Explanations --> Model agnostic : 어떠한 모델이라도 적용 가능<br>
+* 데이터를 바꿔보면서 (noise를 주면서) 정확도를 측정해보는 것.<br>
+- Step 1. Modeling<br>
+- 평상시 우리가 돌리는 Model을 사용하여 학습을 진행 - Weight based Model (Regression, Logistic Regression...), Tree based Model (Random Forest, Gradient Boosting Tree, Xgboost,...), Deep Learning(CNNs, RNNs, ... ) 모든 모델을 사용해도 됨 <br>
+- LIME은 Model에 대한 Scalability를 보장<br>
+- Step 2. Dataset and Predictions<br>
+- Step 3. Picking Step - 확실한 패턴이 있는 데이터를 추출하기 위하여 학습이 잘된 데이터 (MSE가 낮은)를 추출<br>
+- Step 4. Explanations - 도출할 때는 LIME 사용해서 도출<br>
+- Step 5. Human makes decision<br>
+
+*  Locally approximation 과정 관련 그림 추가할 것. <br>
+
+1-2) SHAP <br>
+* Shapley Additive exPlanations / LIME 개념 + 경제학 개념 (노벨 경제학상을 받은 Shapley Values(게임이론 : 여러 주제가 서로 영향을 미치는 상황에서 서로 어떤 의사결정이나 행동을 하는지에 대한 이론)을 접목시킴<br>
+* Core는 효율성이라는 바람직한 특성을 가지고 있으면서 바람직하지 못한 특성도 보유<br>
+* (분배에 대한) "유일한" 해를 제공하지 못한다는 단점 -> 다른 해들이 많이 개발돼서 가장 잘 알려진 것이 SV(Shapley Value)<br>
+
+1-2-1) SHAP 실습<br>
+
 
 ** 랜덤 포레스트에서 변수의 중요도가 높다면, <br>
 - Random permutation 전-후의 OOB Error 차이가 크게 나타나야 하며, 그 차이의 편차가 적어야함<br>
