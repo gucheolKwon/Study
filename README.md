@@ -107,6 +107,75 @@ def quick_sort(arr):
 * 알고리즘 트레이닝 사이트<br>
 백준 / 프로그래머스 / Codility / LeetCode<br>
 
+예시-------------------------------------------------------------------------------------
+```python
+import random
+
+def quick_sort(arr):
+  if len(arr) <= 1:
+    return arr
+  pivot = random.choice(arr)
+  less = []
+  greater = []
+  equal = []
+
+  for item in arr:
+    if item > pivot:
+      greater.append(item)
+    elif item < pivot:
+      less.append(item)
+    else:
+      equal.append(item)
+  return quick_sort(less) + equal + quick_sort(greater)
+```
+
+객체지향 프로그래밍 <br>
+- 객체는 속성(필드, 데이터)과 기능(프로시저, 메소드)으로 구성<br>
+- 현실 세계의 개념, 사물을 프로그램에서 모델링 한 것 또는 추상적인 개념 / 객체는 변수화할 수 있음 -> 인스턴스<br>
+
+- 클래스 : 객체의 초기상태값과 기능에 대한 구현을 제공 / 객체를 만들기 위한 설계도<br>
+- ㄴ self는 자기 자신을 의미하는 예약어<br>
+- 멤버 변수 : 객체가 가지는 속성 또는 값 / 멤버 변수로의 접근 : Obj.variable / 인스턴스 내부에서 접근할 때 : self.variable<br>
+- ㄴ 멤버 변수의 초기화는 생성자를 통한다. == 생성 시 넘겨받은 파라미터를 활용하여 초기화 ex) self.name = name<br>
+- ㄴ 생성자(Constructor) : 클래스를 통해 인스턴스를 생성할 때, 반드시 실행되는 메소드 / __init__() 이라는 이름으로 예약되어 있음<br>
+
+객체지향 4대 주요 개념<br>
+1) 상속 (Inheritance)<br>
+- 'super()' 함수를 사용하여 부모 클래스의 메소드 사용 가능<br>
+- python에서는 다중 상속도 가능
+2) 추상화 (Abstraction)<br>
+- 복잡한 구조를 모델링을 통해 필수 동작들로 단순화 하는 과정 / 다양한 객체들간의 공통점을 찾고, 이들을 포괄하는 상위 추상 클래스 정의
+- 추상 클래스를 위한 표준 라이브러리 : abc / Abstract Base Class / abc 모듈을 통해 추상 클래스 및 추상 메소드를 정의 / ABC 클래스 또는 @abstractmethod로 정의
+- ```python
+from abc import ABC, abstractmethod
+
+class Shape(ABC):
+  @abstractmethod
+  def get_size(self):
+    pass
+class Rectangle(Shape):
+  def __init__(self, height, width):
+    self.height = height
+    self.width = width
+  def get_size(self):
+    return self.height * self.width
+
+class Circle(Shape):
+  def __init__(self, radius):
+    self.radius = radius
+  def get_size(self):
+    return 3.14 * self.radius
+```
+3) 캡슐화 (Encapsulation)<br>
+- 객체 외부에서 접근 가능한 기능(public) / 내부에서만 접근 가능한 기능 (private)<br>
+- 접근 제어자 - public (공개) / protected (보호, 객체 및 상속받은 객체에서 접근 가능, '_'를 붙임) / private (비공개, 객체 내에서만 접근 가능, '__'를 붙임)<br>
+4) 다형성 (Polymorphism)<br>
+- 다양한 클래스들이 동일한 이름의 메소드를 각자의 목적에 맞게 사용<br>
+- 메소드 오버라이딩<br>
+예시-------------------------------------------------------------------------------------
+```python
+# class 선언된 객체에다가 .mro()를 입력하면 어떤 메서드 순으로 호출하는지 확인할 수 있음
+```
 예외처리의 구조<br>
 ㄴ try - except - else - finally 구조<br>
 ㄴ try : 예외가 일어날 수 있는 코드 / except : 예외가 일어나면 실행될 코드 / else : 예외가 없을 때 실행될 코드 / finally : 예외 발생 여부와 무관하게 마지막에 실행될 코드<br>
@@ -195,6 +264,77 @@ Local Model-Agnostic Methods : LIME, SHAP<br>
 - Random permutation 전-후의 OOB Error 차이가 크게 나타나야 하며, 그 차이의 편차가 적어야함<br>
 
 
+------------------------------------------------------------------------------------
+웹크롤링- fastcampus 강의 - 파이썬으로 할 수 있는 모든것 with 47개 프로젝트 초격차 패키지 Online <br>
+* 크롤링 할때 주의사항<br>
+  1) robots.txt를 확인해 허용 범위 확인하기<br>
+* HTTP와 웹 구동방식<br>
+  1) HTTP(Hypertext Transfer Protocol) : 서버와 클라이언트가 인터넷상에서 데이터를 주고받기 위한 프로토콜<br>
+     ㄴ HTTP 메시지 = ex) 택배 송장 / 요청 메소드의 종류 : SELECT(GET 정보를 요청), INSERT (POST 정보를 입력), UPDATE  (PUT 정보를 업데이트), DELETE (DELETE 정보를 삭제)<br>
+  2) URL (Uniform Resource Locator) : HTTP와는 독립된 체계로 자원의 위치를 알려주기 위한 프로토콜<br>
+* HTML과 태그<br>
+  1) HTML (Hypertext Markup Language) : 웹페이지를 작성하기 위한 문법들 중 하나. 99% 이상 사용됨<br>
+     ㄴ tag 종류들이 어떤게 있는지 확인할 수 있는 사이트 - https://www.w3schools.com/tags/ref_byfunc.asp<br>
+* 개발자 도구 : 웹브라우저에서 개발자를 위해 지원하는 편의 기능<br>
+* ID : 대체로 한번만 사용 / 주로 HTML 객체를 고유하게 찾을 용도로 사용<br>
+* Class : 여러번 사용 / CSS(디자인 서식)을 적용하는 용도로 사용<br>
+------------------------------------------------------------------------------------
+웹 개발 프로젝트 - Fastapi를 활용해 이미지 저장 및 서빙하기<br>
+* Annotation Based API server : Python 3.6+ 부터 지원하며, 그 이유는 Type Annotation<br>
+* 내부에서 Starlette과 Pydantic을 사용 / 자동 스웨거를 지원<br>
+* 서버를 만들기 위해 사용할 패키지 : SQLAlchemy, PyMySQL, Uvicorn, uvloop, Gunicorn, Pydantic, Starlette<br>
+* Pydantic : 파이썬이 제공하는 타입 어노테이션을 이용한 Data 검증하는 시리얼라이저<br>
+```python
+# dummy code
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def index():
+  return {"index": "Hello FastAPI"}
+
+@app.get("/math/sum")
+def math_sum(number_1: int, number_2: int):
+  return {"result": number_1 + number_2}
+```
+* Uvicorn : 비동기 웹서버를 위한 라이브러리.
+* 강의 github : https://github.com/riseryan89/imizi-api.git
+* FastAPI DB 핸들링 : MySQL + DBeaver 설치해서 사용.
+* SQLAlchemy : 많은 회사들이 사용하고 있는 라이브러리 ex. Yelp!, reddit, DropBox
+* 왜 ORM ? -> SQL 없이 OOP 언어로 DB 조작이 가능 / 비즈니스 로직에 집중할 수 있음 / 코드 재사용 및 유지보수 용이 / DBMS에 민감하지 않음.
+```python
+# 공식 예제 코드
+from sqlalchemy import text
+
+sql = text('SELECT * from BOOKS WHERE BOOKS.book_price > 100')
+results = engine.execute(sql)
+
+result = engine.execute(sql).fetchall()
+
+for record in result:
+  print("\n", record)
+
+# SQLAlchemy 테이블 객체 정의
+class Users(Base):
+  __tablename__ = "users"
+  email = Column(String(64), nullable=False)
+  pw = Column(String(256), nullable=False)
+  api_keys = relationship("APIKeys", back_populates="users")
+
+class APIKeys(Base):
+  __tablename__= "users_api_keys"
+  user_id = Column(ForeignKey("users.id"), nullable=False)
+  access_key = Column(String(64), nullable=False)
+  secret_key = Column(String(64), nullable=False)
+  whitelist_ips = Column(String(256), nullable=False)
+  users = relationship("Users", back_populates="api_keys")
+```
+* SQLAlchemy - String / Integer / BigInteger / Boolean / Date / Datetime / Text / Json<br>
+* DB - varchar / integer, int / bigint / boolean / date / timestamp, datetime / text / json<br>
+* DB 모델링<br>
+ㄴ 
 
 
-
+* Github Actions - Github이 제공하는 빌드/테스트/배포 자동화 도구<br>
+ㄴ 
