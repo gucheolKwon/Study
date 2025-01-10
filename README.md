@@ -335,6 +335,11 @@ class APIKeys(Base):
 * DB 모델링<br>
 ㄴ 
 
+* FastAPI 인증 미들웨어 만들기<br>
+ㄴ Middleware 하는 일 : API 레벨의 함수가 실행되기 전에 수행 / 데이터 전처리 / 데이터 정합성 검증 / 인증 정보 검증<br>
+ㄴ 구현할 수 있는 방법 : Depends 사용 / Middleware 사용
+
+
 
 * Github Actions - Github이 제공하는 빌드/테스트/배포 자동화 도구<br>
-ㄴ 
+
