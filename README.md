@@ -337,9 +337,115 @@ class APIKeys(Base):
 
 * FastAPI 인증 미들웨어 만들기<br>
 ㄴ Middleware 하는 일 : API 레벨의 함수가 실행되기 전에 수행 / 데이터 전처리 / 데이터 정합성 검증 / 인증 정보 검증<br>
-ㄴ 구현할 수 있는 방법 : Depends 사용 / Middleware 사용
-
-
+ㄴ 구현할 수 있는 방법 : Depends 사용 / Middleware 사용<br>
 
 * Github Actions - Github이 제공하는 빌드/테스트/배포 자동화 도구<br>
 
+
+------------------------------------------------------------------------------------
+올인원 패키지 : 머신러닝 서비스 구축을 위한 실전 MLOps + https://mlops-for-all.github.io/docs/introduction/levels<br> 
+* 학습 환경과 배포 환경은 같지 않다!<br>
+* 학습된 머신러닝 모델이 동작하기 위해서 필요한 3가지 : 파이썬 코드 / 학습된 가중치 / 환경 (패키지, 버전 등)<br>
+* 버전 관리 - 테스트 자동화 - 모니터링<br>
+* MLOPs의 구성 요소 : 데이터 / 모델 / 서빙<br>
+  1-1) 데이터 수집 파이프라인 : Sqoop, Flume, Kafka, Flink, Spark Streaming, Airflow<br>
+  1-2) 데이터 저장 : MySQL, Hadoop, Amazon S3, MinIO<br>
+  1-3) 데이터 관리 : TFDV, DVC, Feast, Amundsen<br>
+  2-1) 모델 개발 : Jupyter Hub, Docker, Kubeflow, Optuna, Ray, katib<br>
+  2-2) 모델 버전 관리 : Git, MLFlow, Github Action, Jenkins<br>
+  2-3) 모델 학습 스케줄링 관리 : Grafana, Kubernetes<br>
+  3-1) 모델 패키징 : Docker, Flask, FastAPI, BentoML, Kubeflow, TFServing, seldon-core<br>
+  3-2) 서빙 모니터링 : Prometheus, Grafana, Thanos<br>
+  3-3) 파이프라인 매니징 : Kubeflow, argo workflows, Airflow<br>
+--> AWS SageMaker / GCP Vertex AI / Azure Machine Learning가 상용 프로그램<br>
+
+* MLOps의 기본 : ML 이론 / SW 구현 능력 / 클라우드 지식 / 협업 능력<br>
+* Reproducibililty (실행 환경의 일관성 & 독립성) / Job Scheduling (스케줄 관리, 병렬 작업 관리, 유휴 자원 관리) / Auto-healing & Auto-scaling (장애 대응, 트래픽 대응)<br>
+* Docker 실습 <br>
+ㄴ Virtualbox 로 VM 만들고 (Ubuntu 20.04.3) 환경에서 시작 <br>
+ㄴ Tip) 어떤 오픈소스를 사용하더라도 공식 문서를 참고하는 습관을 들이는 것 추천<br>
+* 1) Set up the repository : apt 라는 패키지 매니저 업데이트 (sudo apt-get update) / docker의 prerequisite package 들을 설치 ( sudo apt-get install \ apt-transport-https \ ca-certicficates \ curl \ gnupg \ lsb-release <br>
+ㄴ docker의 GPG key 추가 (curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor - o /usr/share/keyrings/docker-archive-keyring.gpg <br>
+ㄴ stable 버전의 repository를 바라보도록 설정 ( echo \ "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]https://download.docker/com/linux/ubuntu \ $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null <br>
+* 2) Install Docker Engine (sudo apt-get update) (sudo apt-get install docker-ce docker-ce-cli containerd.io) <br>
+* 3) 정상 설치 확인 (sudo docker run hello-world)<br>
+* 4) Docker 권한 설정 (sudo usermod -a -G docker $USER) (sudo service docker restart) <br>
+
+* Docker 기본적인 명령<br>
+  1) Docker pull : docker image repository 부터 Docker image를 가져오는 커맨드 (docker pull --help) <br>
+  2) Docker images : 로컬에 존재하는 docker image 리스트를 출력하는 커맨드 (docker images --help) <br>
+  3) Docker ps : 현재 실행중인 도커 컨테이너 리스트를 출력하는 커맨드 (docker ps --help) <br>
+  4) Docker run : 도커 컨테이너를 실행시키는 커맨드 (docker run --help) <br>
+  ㄴ docker run it --name demo1 ubuntu:18.04 /bin/bash (-it : container를 실행시킴과 동시에 interactive한 terminal로 접속시켜주는 옵션, --name : 컨테이너 id 대신 구분하기 쉽도록 지정해주는 이름, /bin/bash : 컨테이너를 실행시킴과 동시에 실행할 커맨드로, bash 터미널을 사용하는 것 의미 <br>
+  5) Docker exec : Docker 컨테이너 내부에서 명령을 내리거나, 내부로 접속하는 커맨드 (docker exec --help) <br>
+  6) Docker logs : log를 확인하는 커맨드 (docker logs --help) ex) docker run --name demo3 -d busybox sh -c "while ture; do $(echo date); sleep 1; done" <br>
+  7) Docker stop : 실행 중인 도커 컨테이너를 중단시키는 커맨드 (docker stop --help)<br>
+  8) Docker rm : 도커 컨테이너를 삭제하는 커맨드 (docker rm --help) <br>
+  9) Docker rmi : 도커 이미지를 삭제하는 커맨드 (docker rmi --help) <br>
+* Docker Image : 어떤 애플리케이션에 대해서, 단순히 애플리케이션 코드뿐만이 아니라, 그 애플리케이션과 dependent한 모든 것을 함께 패키징한 데이터<br>
+* Dockerfile : 사용자가 도커 이미지를 쉽게 만들 수 있도록 제공하는 템플릿<br>
+  1) Dockerfile 만들기<br>
+     cd $HOME #home 디렉토리로 이동<br>
+     mkdir docker-practice #docker-practice 폴더 생성<br>
+     cd docker-practice<br>
+     touch dockerfile # Dockerfile이라는 빈 파일 생성<br>
+  2) 기본 명령어<br>
+     FROM : Dockerfile이 base image로 어떠한 이미지를 사용할 것인지를 명시하는 명령어 (FROM <image>[:<tag>] [AS <name>]<br>
+     COPY : <src>의 파일 혹은 디렉토리를 <dest> 경로에 복사하는 명령어 (COPY <src> .... <dest>)<br>
+     RUN : 명시한 커맨드를 도커 컨테이너에서 실행하는 것을 명시하는 명령어 (RUN <command>) ex) RUN pip install torch<br>
+     CMD : 명시한 커맨드를 도커 컨테이너가 시작될 때, 실행하는 것을 명시하는 명령어 (CMD <command>) ex) CMD python main.py<br>
+     WORKDIR : 이후 작성될 명령어를 컨테이너 내의 어떤 디렉토리에서 수행할 것인지를 명시하는 명령어 (WORKDIR /path/to/workdir)<br>
+     ENV : 컨테이너 내부에서 지속적으로 사용될 environment variable의 값을 설정하는 명령어 (ENV <key> <value>)<br>
+     EXPOSE : 컨테이너에서 뚫어줄 포트/프로토콜을 지정할 수 있음. protocol 지정하지 않으면 TCP가 디폴트로 설정 (EXPOSE <port>/<protocol>)<br>
+* Docker build from Dockerfile (docker build --help) ex) docker build -t my-image:v1.0.0 . (.은 현재 경로에 있는 dockerfile로부터라는 의미) <br>
+  #### grep : my-image가 있는지를 잡아내는 (grep) 하는 명령어 ex. docker images | grep my-image<br>
+* Docker Image 저장소 - Docker Registry <br>
+  ㄴ docker run -d -p 5000:5000 --name registry registry / docker ps <br>
+  ㄴ my-image를 방금 생성한 registry를 바라보도록 tag - > docker tag my-image:v1.0.0 localhost:5000/my-image:v1.0.0 / docker images | grep my-image <br>
+  ㄴ my-image를 registry에 push (업로드) > docker push localhost:5000/my-image:v1.0.0<br>
+  ㄴ 정상적으로 push됐는지 확인 > curl -X GET http://localhost:5000/v2/_catalog<br>
+* Docker Hub<br>
+
+* Kubernetes (public cloud - Amazon EKS, Google Kubernetes Engine, Azure Kubernetes Service) <br>
+ㄴ 나만의 작은 쿠버네티스 : https://github.com/kubernetes/minikube / https://github.com/ubuntu/microk8s / https://github.com/k3s-io/k3s <br>
+ㄴ 쿠버네티스의 컨셉 : 선언형 인터페이스와 Desired State / Master Node & Worker Node / <br>
+
+* Kubernetes 실습 <br>
+ㄴ yaml : 데이터 직렬화에 쓰이는 포맷/양식 중 하나 / 데이터 직렬화 = 서비스간에 Data를 전송할 때 쓰이는 포맷으로 변환하는 작업. 다른 데이터 직렬화 포맷은 XML, JSON <br>
+   -> kubernetes manifests 명세 / docker compose 명세 / ansible playbook 명세 / github action workflow 명세 등에 쓰임 <br>
+   -> - 를 사용해서 list를 명시할 수 있음 /  [] 를 사용해도 됨<br>
+ㄴ minikube를 사용하여 쿠버네티스 실습 <br>
+   -> 설치 : https://minikube.sigs.k8s.io/docs/start/ 또는 https://kubernetes.io/ko/docs/tasks/tools/install-kubectl-linux/ <br> 
+   -> (커맨드는 cmd 기반 CPU) curl -LO https://storage.googleapis.com/minikube/releases/v1.22.0/minikube-linux-amd64 <br>
+   -> sudo install minikube-linux-amd64 /usr/local/bin/minikube <br> / 정상 다운로드 확인 minikube --help <br>
+   * Basic Commands : start / status / stop / delete<br>
+   minikube start --driver=docker / 정상적으로 생성됐는지 minikube 상태 확인 : minikube status / 
+ㄴ kubectl : kubernetes cluster (server)에 요청을 간편하게 보내기 위해서 널리 사용되는 client 툴<br>
+  -> 설치 : curl -LO https://dl.k8s.io/release/v1.22.1/bin/linux/amd64/kubectl <br>
+  -> kubectl 바이너리를 사용할 수 있도록 권한과 위치 변경 : sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl <br>
+  -> 정상적으로 설치됐는지 확인 : kubectl --help / 버전 확인 : kubectl version <br>
+  -> kubectl을 사용해서 minikube 내부의 default pod들이 정상적으로 생성됐는지 확인 : kubectl get pod -n kube-system<br>
+ㄴ pod : 쿠버네티스에서 생성하고 관리할 수 있는 배포 가능한 가장 작은 컴퓨팅 단위 <br>
+  -> Pod 단위로 스케줄링, 로드밸런싱, 스케일링 등의 관리 작업을 수행 == "쿠버네티스에 어떤 애플리케이션을 배포하고 싶다면 최소 Pod으로 구성해야 한다는 의미"<br>
+  -> Pod = Container를 감싼 개념 / 하나의 Pod = 한 개의 container 또는 여러 개의 container. Pod 내부의 여러 Container는 자원을 공유함 <br>
+  -> vi pod.yaml 해서 파일을 만든 다음에 kubectl apply -f pod.yaml 을 입력하면 yaml-file-path에 해당하는 kubernetes resource를 생성 또는 변경할 수 있음 <br>
+  ** kubernetes resource의 desired state를 기록해놓기 위해 항상 YAML 파일을 저장하고, 버전 관리하는 것을 권장. <br>
+  -> 생성한 Pod의 상태를 확인 : kubectl get pod <br>
+  -> Pod 조회 : kubectl get pod을 통해 얻은 것은 Current State를 출력. <br>
+     namespace : kubernetes에서 리소스를 격리하는 가상의(논리적인) 단위 / kubectl config view --minify | grep namespace: 로 current namespace가 어떤 namespace로 설정되었는지 확인할 수 있음 <br>
+
+  -> Pod 로그 : kubectl logs <pod-name> / kubectl logs <pod-name> -f : 로그를 계속 보여줌 / kubectl logs <pod-name> -c <container-name> : 여러개의 container가 있는 경우 다음과 같이 실행 <br>
+  -> Pod 내부 접속 : kubectl exec -it <pod-name> -- <명령어> / kubectl exec -it <pod-name> -c <container-name> -- <명령어> <br>
+  -> Pod 삭제 : kubectl delete pod <pod-name> / kubectl delete -f <YAML-파일경로> <br>
+  
+ㄴ Depolyment : Pod와 Replicaset에 대한 관리를 제공하는 단위 <br>
+  -> 관리 = "Self-healing, Scaling, rollout (무중단 업데이트) 와 같은 기능" 포함 <br>
+  -> Deployment 는 Pod을 감싼 개념 = Pod을 Deployment로 배포함으로써 여러 개로 복제된 Pod, 여러 버전의 Pod을 안전하게 관리할 수 있음.<br>
+  -> Deployment 조회 : kubectl get deployment / kubectl get deployment,pod (deployment,pod 동시에 조회) <br>
+  -> Deployment Auto-healing : kubectl delete pod <pod-name> / kubectl get pod --> 기존 pod이 삭제되고, 동일한 pod이 새로 하나 생성된 것을 확인할 수 있음. <br>
+  -> Deployment Scaling : kubectl scale deployment/nginx-deployment --replicas=5 (replica 갯수 늘리기) / kubectl get deployment / kubectl get pod <br>
+  -> Deployment 삭제 : kubectl delete deployment <deployment-name> / kubectl get deployment / kubectl get pod <br>
+
+ㄴ Service : 쿠버네티스에 배포한 애플리케이션을 외부에서 접근하기 쉽게 추상화한 리소스 <br>
+  -> Pod은 IP를 할당받고 생성되지만, 언제든지 죽었다가 다시 살아날 수 있으며, 그 과정에서 IP는 항상 재할당받기에 고정된 IP로 원하는 Pod에 접근할 수는 없음<br>
+  -> 클러스터 외부 혹은 Pod에 접근할 때는 Pod의 IP가 아닌 Service 를 통해서 접근하는 방식을 거침 / Service는 고정된 IP를 가지며, Service는 하나 혹은 여러 개의 Pod과 매칭 / 클라이언트가 Service 주소로 접근하면 실제로는 Service에 매칭된 Pod에 접속할 수 있게 됨 <br>
