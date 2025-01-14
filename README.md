@@ -449,3 +449,145 @@ class APIKeys(Base):
 ㄴ Service : 쿠버네티스에 배포한 애플리케이션을 외부에서 접근하기 쉽게 추상화한 리소스 <br>
   -> Pod은 IP를 할당받고 생성되지만, 언제든지 죽었다가 다시 살아날 수 있으며, 그 과정에서 IP는 항상 재할당받기에 고정된 IP로 원하는 Pod에 접근할 수는 없음<br>
   -> 클러스터 외부 혹은 Pod에 접근할 때는 Pod의 IP가 아닌 Service 를 통해서 접근하는 방식을 거침 / Service는 고정된 IP를 가지며, Service는 하나 혹은 여러 개의 Pod과 매칭 / 클라이언트가 Service 주소로 접근하면 실제로는 Service에 매칭된 Pod에 접속할 수 있게 됨 <br>
+
+
+MEW Model : Denoising Autoencoder (Supervised-Learning)
+
+모델 개발 Tracking : MLflow 
+Tensorboard (TensorFlow의 시각화 툴킷) 실행하여 머신러닝 실험 이해하고 디버깅 및 로그 관리
+Flask : web application 개발 도구, REST API 통한 on demand inference 기능을 구현하기 위함. 
+mewtwo 서버에서 Docker로 flask를 실행하는 환경으로 운영됨
+13 pt → 64 pt 계측 결과를 추론해내는 시스템
+
+MLflow
+mlflow server -h 0.0.0.0 -p 5000
+```python
+import mlflow
+mlflow.set_tracking_uri("http://{server}:{port}")
+mlflow.create_experiment('RF_TEST')
+mlflow.set_experiment('RF_TEST')
+ 
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_diabetes
+from sklearn.ensemble import RandomForestRegressor
+ 
+mlflow.autolog()
+ 
+db = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(db.data, db.target)
+ 
+rf = RandomForestRegressor(n_estimators=20, max_depth=6, max_features=3)
+rf.fit(X_train, y_train)
+ 
+predictions = rf.predict(X_test)
+```
+
+스케쥴러(Workflow Management) : Apache Airflow w. Celery Executor
+데이터 전처리, 학습, 예측, 배포, ETL 등에 강점을 보이는 Data Workflow Management Tool
+13 pt from DataLake 취득 방식 : Polling Job → Crawling Job → Run Predictor 
+시스템에 사용하는 Repository 방식 : Realational Database (ex. MySQL, PostgreSQL)
+User Service 형태 : WebService : Mendix
+
+CD (배포 자동화) 설정 - Jenkins
+pipeline {
+    agent {
+        label "project_name"
+    }
+    stages{
+        stage("SCM Checkout"){
+            steps{
+                script{
+                    echo '********************** START CHECKOUT **********************'
+         
+                    echo '** Clean Project **'
+                    sh 'if ! [ -f $WORKSPACE ]; then rm -rf $WORKSPACE; fi'
+                     
+                    echo '** Checkout **'
+                    sh 'git config --global http.sslVerify false'
+                    git branch: 'master', credentialsId: 'id', url: 'git repo URL'
+                     
+                    echo '********************** FINSISH CHECKOUT **********************'
+                }
+            }
+        }
+        stage("Build"){
+            steps{
+                script{
+                    echo '********************** START BUILD **********************'
+                     
+                    sh 'cp /appdata/config/db_config.json ./project_1/config/'
+                    sh 'cp /appdata/config/db_config.json ./project_2/config/'
+                    //sh 'cp /appdata/config/db_config.json ./project_3/config/'
+                     
+                    echo '********************** FINSISH BUILD **********************'
+                }
+            }
+        }
+        stage("deploy"){
+            steps{
+                script{
+                    echo '********************** START DEPLOY **********************'
+                     
+                    // copy to target directory
+                    sh 'rm -r /appdata/production/project_1/'
+                    sh 'mkdir /appdata/production/project_1/'
+                    sh 'cp -r $WORKSPACE/* /appdata/production/project_1/'
+                    sh 'chmod -R ugo+rwx /appdata/production/project_1/'
+                     
+                    echo '********************** DEPLOY COMPLETE **********************'
+                }
+            }
+        }
+        stage("operate"){
+            steps{
+                script{
+                    echo '********************** START OPERATE **********************'
+                     
+                    //sh 'python ~~~'
+                     
+                    echo '********************** OPERATE COMPLETE & END PIPELINE **********************'
+                }
+            }
+        }
+    }
+}
+
+서버 모니터링 - Grafana
+mkdir prometheus  # 아무데에나 만들면 됨
+cd prometheus
+curl -O node_exporter-1.6.1.linux-amd64.tar.gz 설치 주소
+tar -xvf node_exporter-1.6.1.linux-amd64.tar.gz
+cd node_exporter-1.6.1.linux-amd64
+nohup ./node_exporter > /dev/null 2>&1 &
+ps -ef | grep -v grep | grep node_exporter
+ 
+## 참고 ##
+## gitlab 설치되어있는 서버에서 prometheus 같이 설치 시 충돌 발생 ##
+## gitlab에서 제공하고 있는 모니터링 기능 종료 명령어 ##
+sudo gitlab-ctl stop node-exporter
+ 
+## 이후 다시 다음 명령어 실행 ##
+cd ../prometheus/node_exporter-1.6.1.linux-amd64
+nohup ./node_exporter > /dev/null 2>&1 &
+
+Airflow 
+: batch-oriented workflow를 개발, 예약, 모니터링하기 위한 오픈소스 플랫폼
+- 구성요소
+  1) schedular : worokflow를 처리하는 역할. executor로 task 보냄
+  2) Executor : task를 처리하는 역할. 주로 worker에게 task execution을 push
+  3) web server : DAG, task 관리 도와주는 user interface
+  4) DAG (Directed Acyyclic Graph) : Python으로 작성된 workflow. task 모음이면서 task 관계 정의
+  5) Database : DAG과 task의 metadata가 저장되는 DB
+  6) Worker : 실제로 task를 실행하는 주체
+ 
+- 실제 동작
+  1) DAG(workflow)에 따라서 schedular가 task를 scheduling
+  2) schedule에 맞게 worker가 task 처리
+  3) task의 진행 상황은 database에 저장
+  4) airflow UI에서 확인 가능
+- DAG 설정 python code 예시
+  1) import module
+  2) define DAG : DAG id나 schedule 정보 등 입력
+  3) define task 
+  3-1) Operator : task 실행하는 방버 정의. 다양한 operator가 있음. ex) BashOperator : bash command 실행. PythonOperator : python 구문 실행
+  4) task dependancy 정의
