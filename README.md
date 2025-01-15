@@ -652,3 +652,160 @@ HTTP Method는 왜 사용할까요?
 
 한줄로 요약하면 HTTP Method를 사용하는 이유는 '자원' 과 '동작' 을 분리하기 위해서랍니다!
 
+<Python 실행속도 최적화>
+1. 적절한 자료구조의 사용
+in 연산을 사용하여 특정 데이터가 자료구조 안에 있는지 찾고자 할 때 적합한 자료구조는 set이다.
+list에서 자료를 찾는데 필요한 시간 복잡도는 O(n)이지만
+set에서 자료를 찾는 데는 O(1) 밖에 소요되지 않는다.
+
+딕셔너리를 사용할 때는 데이터 초기화 작업이 dict 보다 빠른 defaultdict를 사용하도록 한다.
+2. 리스트컴프리핸션을 제네레이터 표현으로 대체한다.
+제너레이터 표현식은 이터레이터를 메모리에 저장하지 않고
+결과를 얻을 수 있어 공간 복잡도를 줄이는 효과도 있다.
+
+3. 글로벌 변수는 로컬 변수로 대체한다.
+글로벌 변수의 사용은 시스템의 심각한 오류를 야기할 수 있으며,
+실행 속도 또한 로컬 변수에 비해 느리므로 불가피한 경우가 아니라면 로컬변수로 사용하도록 한다.
+4. dot 연산을 피한다.
+import한 라이브러리 가운데 코드에서 자주 쓰이는 function의 경우는
+from {라이브러리명} import {함수명}과 같이 직접적으로 함수까지 지정하여 dot 연산을 피할 수 있다.
+매번 dot 연산 시에 호출되는 __getattribute__()나 __getattr__() 호출을 막아 실행 시간을 줄일 수 있다.
+
+클래스 프로퍼티를 위해 사용하는 dot 연산 역시 위와 같은 맥락이다.
+사용을 최소화할수록 속도가 올라간다.
+
+5. 불필요한 추상화를 피한다. 
+필요한 코드들을 하나로 묶기 위해 사용되는
+데코레이터, 클래스 속성 접근, 디스크립터 등도 코드의 실행속도를 저하시킬 수 있다.
+대부분의 경우에서 추상화가 필요한지 다시 한번 생각해볼 필요가 있다.
+
+파이썬은 C/C++ 프로그래머들이 클래스 속성에 접근하기 위해 사용하는
+getter/setter 스타일보다 더 간단한 문법을 제공한다.
+
+6. 데이터 중복을 피한다.
+의미 없는 데이터 복사를 피한다.
+
+문자열을 붙일 때는 + 연산 대신 join()을 사용한다.
+
+파이썬의 str 타입 객체는 그 내용을 변경할 수 없는 객체이기 때문에 두 str 타입의 객체를
++ 연산하는 경우 각각의 문자열을 새로운 메모리 공간에 복사하여 작업을 수행하게 된다.
+
+join()을 사용하게 되면 문자열 병합에 필요한 총 메모리 공간을 미리 계산한 뒤
+필요한 메모리를 확보 후 해당 공간에 각각의 문자열을 복사하여 실행시간을 줄일 수 있다.
+7. if문에 두 개 이상의 조건이 주어질 때 각 조건들 사이에 논리연산자에 따라 조건의 순서를 변경해준다.
+if condition1 and condition2: condition 간에 논리 연산이 and 인 경우
+False 값을 많이 가진 condition을 condition1에 오도록 하면
+뒤따라오는 condition2에 대한 확인 작업을 피할 수 있다.
+
+if condition1 or condition2: condition 간에 or 연산이 적용된 경우
+True 값을 많이 가진 condition을 condition1에 오도록 하면
+뒤따라오는 condition2에 대한 확인 작업을 피할 수 있다.
+8. 반복문 최적화
+while 문은 for 문으로 대체한다.
+for문이 while문 보다 빠르게 실행된다.
+반복문의 실행 도중에 반복문의 종료 조건을 계산하는 경우가 아니라면 for 문을 사용하도록 한다.
+
+명시적 for문은 암시적 for문으로 변경한다.
+즉, 직접 인덱싱 하지 않고 이터레이션을 사용하여 반복문에서 사용할 요소에 접근한다.
+
+반복문 내부의 연산을 줄인다.
+
+ex) 8.2: 이중 반복문 안에서 가장 안쪽에 sqrt()를 두 번 사용하고 있다.
+sqrt() 호출 중 x에 해당하는 것을 첫 번째 for문의 scope로 옮겨주는 것으로 실행 속도를 개선할 수 있다.
+
+```python
+# list comprehension to generator expression
+import sys
+# 리스트 컴프리핸션 (bad)
+nums_sum_list_comprehension = sum([num ** 2 for num in range(1000000)])
+# 제네레이터 표현식 (good)
+nums_sum_generator_expression = sum((num ** 2 for num in range(10000000)))
+ 
+# Bad
+nums_squared_list = [num ** 2 for num in range(1000000)]
+print(sys.getsizeof(nums_squared_list))  # 87632
+# Good
+nums_squared_generator = (num ** 2 for num in range(1000000))
+print(sys.getsizeof(nums_squared_generator))  # 128
+```
+
+```python
+# 추상화
+# Bad: 559ms
+class DemoClass:
+    def __init__(self, value: int):
+        self.value = value
+    @property
+    def value(self) -> int:
+        return self._value
+    @value.setter
+    def value(self, x: int):
+        self._value = x
+def main():
+    size = 1000000
+    for i in range(size):
+        demo_instance = DemoClass(size)
+        value = demo_instance.value
+        demo_instance.value = i
+main()
+# Good: 318ms
+class DemoClass:
+    def __init__(self, value: int):
+        self.value = value  ###
+def main():
+    size = 1000000
+    for i in range(size):
+        demo_instance = DemoClass(size)
+        value = demo_instance.value
+        demo_instance.value = i
+main()
+```
+
+```python
+# for loop 관련
+# explicit for loop: 4.91s
+def computeSum(size: int) -> int:
+    sum_ = 0
+    for i in range(size):  ### explicit for loop
+        sum_ += i
+    return sum_
+ 
+def main():
+    size = 10000
+    for _ in range(size):
+        sum_ = computeSum(size)
+main()
+ 
+# implicit for loop: 1.60s
+def computeSum(size: int) -> int:
+    return sum(range(size))  ### implicit for loop
+ 
+def main():
+    size = 10000
+    for _ in range(size):
+        sum = computeSum(size)
+main()
+```
+
+```python
+# Bad: 13.2s
+import math
+ 
+def main():
+    size = 10000
+    sqrt = math.sqrt
+    for x in range(size):
+        for y in range(size):
+            z = sqrt(x) + sqrt(y)  ###
+main()
+ 
+# Good: 4.91s
+def main():
+    size = 10000
+    sqrt = math.sqrt
+    for x in range(size):
+        sqrt_x = sqrt(x)  ###
+        for y in range(size):
+            z = sqrt_x + sqrt(y)
+main()
+```
