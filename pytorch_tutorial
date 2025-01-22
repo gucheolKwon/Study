@@ -1,1 +1,675 @@
-ff
+# Reference : 파이토치 기본 익히기 (Authors : Suraj Subramanian, Seth Juarez, Cassie Breviu, Dmitry Soshnikov, Ari Bornstein) <br>
+데이터 작업을 위한 기본요소 두가지인 torch.utils.data.DataLoader와 torch.utils.data.Dataset. <br>
+- Dataset : 샘플과 정답(label) 저장, DataLoader : Dataset을 순회 가능한 객체로 감싼다 <br>
+- PyTorch는 TorchText, TorchVision 및 TorchAudio와 같이 도메인 특화 라이브러리를 데이터셋과 함께 제공
+```python
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+
+
+# 공개 데이터셋에서 학습 데이터를 내려받습니다.
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor(),
+)
+
+# 공개 데이터셋에서 테스트 데이터를 내려받습니다.
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor(),
+)
+
+batch_size = 64
+
+# 데이터로더를 생성합니다.
+# Dataset을 DataLoader의 인자로 전달해서 순회 가능한 객체로 감싸고, 자동화된 배치, 샘플링, 섞기 및 다중 프로세스로 불러오기를 지원함.
+# Batch size = 64 : 객체의 각 요소는 64개의 feature & label 묶음으로 반환
+train_dataloader = DataLoader(training_data, batch_size=batch_size)
+test_dataloader = DataLoader(test_data, batch_size=batch_size)
+
+for X, y in test_dataloader:
+    print(f"Shape of X [N, C, H, W]: {X.shape}")
+    print(f"Shape of y: {y.shape} {y.dtype}")
+    break
+```
+
+PyTorch에서 신경망 모델은 nn.Module을 상속받는 클래스를 생성하여 정의. __init__함수에서 신경망의 layer들을 정의하고, forward 함수에서 신경망에 데이터를 어떻게 전달할지 지정. 그리고 GPU 또는 MPS로 신경망을 이동시켜 연산을 가속 <br>
+
+```python
+# 학습에 사용할 CPU나 GPU, MPS 장치를 얻습니다.
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+# 모델을 정의합니다.
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10)
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+
+model = NeuralNetwork().to(device)
+print(model)
+```
+
+# 모델 매개변수 최적화하기 <br>
+## 모델을 학습하려면 손실함수(loss function)와 옵티마이저(optimizer)가 필요함<br>
+
+```python
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+
+# 각 학습 단계(training loop)에서 모델은 (배치로 제공되는) 학습 데이터셋에 대한 예측을 수행하고, 예측 오류를 역전파하여 모델의 매개변수를 조정
+def train(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    for batch, (X, y) in enumerate(dataloader):
+        X, y = X.to(device), y.to(device)
+
+        # 예측 오류 계산
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # 역전파
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), (batch + 1) * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+# 모델이 학습하고 있는지를 확인하기 위해 테스트 데이터셋으로 모델의 성능 확인
+def test(dataloader, model, loss_fn):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.eval()
+    test_loss, correct = 0, 0
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+# 학습 단계는 여러번의 반복 단계 (epochs)를 거쳐 수행됨. 각 에폭에서느 모델은 더 나은 예측을 하기 위해 매개변수를 학습. 각 에폭마다 모델의 정확도(accuracy)와 손실(loss)을 출력
+epochs = 5
+for t in range(epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    train(train_dataloader, model, loss_fn, optimizer)
+    test(test_dataloader, model, loss_fn)
+print("Done!")
+
+# 모델 저장하기 - 모델의 매개변수들을 포함해서 내부 상태 사전(internal state dictionary)을 직렬화(serialize)하는 것
+torch.save(model.state_dict(), "model.pth")
+print("Saved PyTorch Model State to model.pth")
+```
+
+모델 불러와서 예측하기
+```python
+model = NeuralNetwork().to(device)
+model.load_state_dict(torch.load("model.pth"))
+
+classes = [
+    "T-shirt/top",
+    "Trouser",
+    "Pullover",
+    "Dress",
+    "Coat",
+    "Sandal",
+    "Shirt",
+    "Sneaker",
+    "Bag",
+    "Ankle boot",
+]
+
+model.eval()
+x, y = test_data[0][0], test_data[0][1]
+with torch.no_grad():
+    x = x.to(device)
+    pred = model(x)
+    predicted, actual = classes[pred[0].argmax(0)], classes[y]
+    print(f'Predicted: "{predicted}", Actual: "{actual}"')
+```
+
+Tensor : 배열이나 행렬과 매우 유사한 특수한 자료구조. PyTorch에서는 텐서를 사용하여 모델의 입력과 출력 그리고 모델의 매개변수들을 부호화(encode) <br>
+또한 자동 미분(automatic differentiation)에 최적화. 텐서와 NumPy의 ndarray는 비슷하다
+
+
+```python
+import torch
+import numpy as np
+
+# 텐서 초기화 - 데이터로부터 직접 생성하기
+data = [[1, 2],[3, 4]]
+x_data = torch.tensor(data)
+
+# NumPy 배열로부터 생성하기 - 텐서는 NumPy 배열로 생성 가능함.
+np_array = np.array(data)
+x_np = torch.from_numpy(np_array)
+
+# 다른 텐서로부터 생성하기 - 명시적으로 재정의하지 않는다면 인자로 주어진 텐서의 속성 (모양(shape), 자료형(data type))을 유지
+x_ones = torch.ones_like(x_data) # x_data의 속성을 유지합니다.
+print(f"Ones Tensor: \n {x_ones} \n")
+
+x_rand = torch.rand_like(x_data, dtype=torch.float) # x_data의 속성을 덮어씁니다.
+print(f"Random Tensor: \n {x_rand} \n")
+
+# 무작위 또는 상수 값을 사용하기 - shape은 텐서의 차원을 나타내는 튜플로 아래 함수들에서는 출력 텐서의 차원을 결정
+shape = (2,3,)
+rand_tensor = torch.rand(shape)
+ones_tensor = torch.ones(shape)
+zeros_tensor = torch.zeros(shape)
+
+print(f"Random Tensor: \n {rand_tensor} \n")
+print(f"Ones Tensor: \n {ones_tensor} \n")
+print(f"Zeros Tensor: \n {zeros_tensor}")
+
+# 텐서의 속성(Attribute) : 텐서의 모양(shape), 자료형(data type) 및 어느 장치에 저장되는지를 나타냄
+tensor = torch.rand(3,4)
+
+print(f"Shape of tensor: {tensor.shape}")
+print(f"Datatype of tensor: {tensor.dtype}")
+print(f"Device tensor is stored on: {tensor.device}")
+
+# 텐서 연산 (Operation) : 전치(transposing), 인덱싱(Indexing), 슬라이싱(slicing), 수학 계산, 선형 대수, 임의 샘플링 등 100가지 이상의 텐서연산들 가능 
+# GPU가 존재하면 텐서를 이동합니다
+if torch.cuda.is_available():
+    tensor = tensor.to("cuda")
+
+# NumPy식의 표준 인덱싱과 슬라이싱
+tensor = torch.ones(4, 4)
+print(f"First row: {tensor[0]}")
+print(f"First column: {tensor[:, 0]}")
+print(f"Last column: {tensor[..., -1]}")
+tensor[:,1] = 0
+print(tensor)
+
+# 텐서 합치시 torch.cat을 사용하여 주어진 차원에 따라 일련의 텐서를 연결 가능. 
+t1 = torch.cat([tensor, tensor, tensor], dim=1)
+print(t1)
+
+# 산술 연산(Arithmetic operations)
+# 두 텐서 간의 행렬 곱(matrix multiplication)을 계산합니다. y1, y2, y3은 모두 같은 값을 갖습니다.
+# ``tensor.T`` 는 텐서의 전치(transpose)를 반환합니다.
+y1 = tensor @ tensor.T
+y2 = tensor.matmul(tensor.T)
+
+y3 = torch.rand_like(y1)
+torch.matmul(tensor, tensor.T, out=y3)
+
+
+# 요소별 곱(element-wise product)을 계산합니다. z1, z2, z3는 모두 같은 값을 갖습니다.
+z1 = tensor * tensor
+z2 = tensor.mul(tensor)
+
+z3 = torch.rand_like(tensor)
+torch.mul(tensor, tensor, out=z3)
+
+# 단일 요소(single-element) 텐서 : 텐서의 모든 값을 하나로 집계(aggregate)하여 요소가 하나인 텐서의 경우, item() 사용하여 Python 숫자 값으로 변환
+agg = tensor.sum()
+agg_item = agg.item()
+print(agg_item, type(agg_item))
+
+# 바꾸기(in-place) 연산 : 연산 결괄르 피연산자(operand)에 저장하는 연산을 바꿔치기 연산이라 부르며, _ 접미사를 가짐 ex) x.copy_(y) 또는 x.t_()는 x를 변경
+# 메모리를 일부 절약하는 연산이지만 기록이 즉시 삭제되어 derivative 계산에 문제가 발생할 수 있어서 권장하지 않음
+print(f"{tensor} \n")
+tensor.add_(5)
+print(tensor)
+
+# NumPy 변환 (Bridge) : 텐서와 NumPy 배열은 메모리 공간을 공유하기 때문에 하나를 변경하면 다른 하나도 변경됨.
+# Tensor -> NumPy 배열로 변환
+t = torch.ones(5)
+print(f"t: {t}")
+n = t.numpy()
+print(f"n: {n}")
+
+# 텐서의 변경 사항이 NumPy 배열에 반영
+t.add_(1)
+print(f"t: {t}")
+print(f"n: {n}")
+```
+
+# Data Tutorial<br>
+TorchVision에서 Fashion-MNIST 데이터셋 불러오는 예제 (기사 이미지 데이터셋 60,000개 학습예제, 10,000개의 테스트 예제. 예제는 흑백의 28x28 이미지와 10개 분류중 하나인 label로 구성) <br>
+- root : 학습/테스트 데이터가 저장되는 경로 <br>
+- train : 학습용 또는 테스트용 데이터셋 여부 <br>
+- download=True : root에 데이터가 없는 경우 인터넷에서 다운로드 <br>
+- transform과 target_transform은 feature와 label transform 지정 <br>
+
+```python
+import torch
+from torch.utils.data import Dataset
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+import matplotlib.pyplot as plt
+
+
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+
+# 데이터셋 순회하고 시각화
+labels_map = {
+    0: "T-Shirt",
+    1: "Trouser",
+    2: "Pullover",
+    3: "Dress",
+    4: "Coat",
+    5: "Sandal",
+    6: "Shirt",
+    7: "Sneaker",
+    8: "Bag",
+    9: "Ankle Boot",
+}
+figure = plt.figure(figsize=(8, 8))
+cols, rows = 3, 3
+for i in range(1, cols * rows + 1):
+    sample_idx = torch.randint(len(training_data), size=(1,)).item()
+    img, label = training_data[sample_idx]
+    figure.add_subplot(rows, cols, i)
+    plt.title(labels_map[label])
+    plt.axis("off")
+    plt.imshow(img.squeeze(), cmap="gray")
+plt.show()
+
+
+# 파일에서 사용자 정의 데이터셋 만들기 - 사용자 정의 DataSet 클래스는 반드시 3개 함수 구현 : __init__, __len__, and __getitem__ 
+import os
+import pandas as pd
+from torchvision.io import read_image
+
+class CustomImageDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+        self.img_labels = pd.read_csv(annotations_file, names=['file_name', 'label'])
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.img_labels)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        image = read_image(img_path)
+        label = self.img_labels.iloc[idx, 1]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
+```
+# __init__ 함수는 Dataset 객체가 생성될 때 한 번만 실행됨. <br>
+# __len__ 함수는 데이터셋의 샘플 개수를 반환 <br>
+# __getitem__ 함수는 주어진 인덱스 idx에 해당하는 샘플을 데이터셋에서 불러오고 반환. 인덱스를 기반으로, 디스크에서 이미지의 위치를 식별하고, read_image를 사용하여 이미지를 텐서로 변환하고, self.img_labels의 csv 데이터로부터 해당하는 정답(label)가져오고, 해당하는 경우 변형(transform)함수들을 호출한 뒤, 텐서 이미지와 라벨을 dict형으로 반환 <br>
+
+```python
+def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+    self.img_labels = pd.read_csv(annotations_file)
+    self.img_dir = img_dir
+    self.transform = transform
+    self.target_transform = target_transform
+def __len__(self):
+    return len(self.img_labels)
+def __getitem__(self, idx):
+    img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+    image = read_image(img_path)
+    label = self.img_labels.iloc[idx, 1]
+    if self.transform:
+        image = self.transform(image)
+    if self.target_transform:
+        label = self.target_transform(label)
+    sample = {"image": image, "label": label}
+    return sample
+```
+
+# DataLoader로 학습용 데이터 준비하기 - 간단한 API로 복잡한 과정들을 추상화한 순회 가능한 객체 <br>
+## Dataset은 데이터셋의 feature 가져오고, 하나의 샘플에 label 지정하는 일을 한 번에 함. 모델을 학습할 때, 일반적으로 샘플들을 minibatch로 전달하고, 매 epoch마다 데이터를 다시 섞어서 overfit 을 막고, python의 multiprocessing을 사용해서 데이터 검색 속도를 높인다
+
+```python
+from torch.utils.data import DataLoader
+
+train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
+test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
+
+# DataLoader를 통해 순회하기 (iterate)
+# 이미지와 정답(label)을 표시합니다.
+train_features, train_labels = next(iter(train_dataloader))
+print(f"Feature batch shape: {train_features.size()}")
+print(f"Labels batch shape: {train_labels.size()}")
+img = train_features[0].squeeze()
+label = train_labels[0]
+plt.imshow(img, cmap="gray")
+plt.show()
+print(f"Label: {label}")
+```
+
+# Transform tutorial - 학습에 필요한 최종 처리가 된 형태로 항상 제공되는게 아니기 때문에 변형을 해서 데이털르 조작하고 학습에 적합하게 만듦.<br>
+- 학습을 하려면 정규화된 텐서 형태의 feature와 on-hot으로 encode된 텐서 형태의 label이 필요함. 그래서 ToTensor와 Lambda를 사용 <br>
+
+```python
+import torch
+from torchvision import datasets
+from torchvision.transforms import ToTensor, Lambda
+
+ds = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor(),
+    target_transform=Lambda(lambda y: torch.zeros(10, dtype=torch.float).scatter_(0, torch.tensor(y), value=1))
+)
+
+# ToTensor() : PIL Image나 NumPy ndarray를 FloatTensor로 변환하고, 이미지의 픽셀 크기 값을 [0., 1.] 범위로 비례하여 조정
+# Lambda 변형 : 사용자 정의 람다 함수를 적용. 정수를 원-핫으로 부호화된 텐서로 바꾸는 함수를 정의. 이 함수는 먼저 데이터셋 정답의 개수인 크기 10 짜리 zero tensor를 만들고, scatter_를 호출하여 주어진 정답 y에 해당하는 인덱스에 value=1을 할당
+target_transform = Lambda(lambda y: torch.zeros(
+    10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1))
+```
+
+# 신경망 모델 구성하기 - 신경망은 데이터에 대한 연산을 수행하는 layer/module로 구성됨. torch.nn 네임스페이스는 신경망을 구성하는데 필요한 모든 구성 요소를 제공. PyTorch의 모든 모듈은 nn.Module의 하위클래스 <br>
+신경망은 다른 layer로 구성된 모듈이며, 이러한 중첩된 구조는 복잡한 아키텍처를 쉽게 구축하고 관리할 수 있음
+
+```python
+import os
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+# 학습을 위한 장치 얻기
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+# 클래스 정의하기 - nn.Module의 하위클래스로 정의하고, __init__ 에서 신경망 계층들을 초기화한다. nn.Module 상속받은 모든 클래스는 forward 메소드에 입력 데이터에 대한 연산들을 구현
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+
+# NeuralNetwork의 인스턴스를 생성하고 이를 device로 이동한 뒤, 구조를 출력
+model = NeuralNetwork().to(device)
+print(model)
+
+# 모델을 사용하기 위해 입력 데이터를 전달. 일부 백그라운드 연산들과 함께 모델의 forward를 실행 (model.forward()를 직접 호출 X)
+# 모델에 입력을 전달하여 호출하면 2차원 텐서를 반환하고, 2차원 텐서의 dim=0 은 각 class에 대한 raw 예측값 10개가, dim=1에는 각 출력의 개별 값들이 해당됨. 원시 예측값을 nn.SoftMax 모듈의 인스턴스에 통과시켜 예측 확률을 얻음
+X = torch.rand(1, 28, 28, device=device)
+logits = model(X)
+pred_probab = nn.Softmax(dim=1)(logits)
+y_pred = pred_probab.argmax(1)
+print(f"Predicted class: {y_pred}")
+
+# 모델 계층(Layer) 
+input_image = torch.rand(3,28,28)
+print(input_image.size())
+# nn.Flatten : 계층을 초기화하여 각 28x28의 2D 이미지를 784 픽셀 값을 갖는 연속된 배열로 변환 (dim=0의 미니배치 차원은 유지됨)
+flatten = nn.Flatten()
+flat_image = flatten(input_image)
+print(flat_image.size())
+# nn.Linear : 선형 계층은 저장된 가중치(weight)와 편향(bias)을 사용하여 입력에 선형 변환(linear transformation)을 적용하는 모듈
+layer1 = nn.Linear(in_features=28*28, out_features=20)
+hidden1 = layer1(flat_image)
+print(hidden1.size())
+# nn.ReLU : 비선형 활성화는 모델의 입력과 출력 사이에 복잡한 관계(mapping)을 만듦. 비선형 활성화는 선형 변환 후에 적용되어 nonlinearity 를 도입하고, 신경망이 다양한 현상을 학습할 수 있도록 돕는다
+# 이 모델에서는 nn.ReLU를 선형 계층들 사이에 사용하지만, 모델을 만들 때는 비선형성을 가진 다른 활성화를 도입할 수도 있음
+print(f"Before ReLU: {hidden1}\n\n")
+hidden1 = nn.ReLU()(hidden1)
+print(f"After ReLU: {hidden1}")
+# nn.Sequential : 순서를 갖는 모듈의 컨테이너. 정의된 것과 같은 순서로 데이터가 모든 모듈들을 통해 전달됨. sequential container를 사용하여 아래의 seq_modules와 같은 신경망을 빠르게 만들 수 있음
+seq_modules = nn.Sequential(
+    flatten,
+    layer1,
+    nn.ReLU(),
+    nn.Linear(20, 10)
+)
+input_image = torch.rand(3,28,28)
+logits = seq_modules(input_image)
+# nn.SoftMax : 신경망의 마지막 선형 계층은 nn.Softmax 모듈에 전달될 원시 값인 logits를 반환. logits는 모델의 각 class에 대한 예측 확률을 나타내도록 [0, 1] 범위로 비례하여 조정됨. dim 매개변수는 값의 합이 1이 되는 차원을 나타낸다
+softmax = nn.Softmax(dim=1)
+pred_probab = softmax(logits)
+
+# 모델 매개변수 : 신경망 내부의 많은 계층들은 parameterize. 학습 중에 최적화되는 가중치와 편향과 연관지어지고, nn.Module을 상속하면 모델 객체 내부의 모든 필드들이 자동으로 track되며, 모델의 parameters() 및 named_parameters() 메소드로 모든 매개변수에 접근할 수 있음
+print(f"Model structure: {model}\n\n")
+
+for name, param in model.named_parameters():
+    print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
+```
+
+# Autograd : torch.autograd를 사용한 자동 미분 - 신경망을 학습할 때 가장 자주 사용되는 알고리즘은 backpropagation. 이 알고리즘에서 매개변수(모델 가중치)는 주어진 매개변수에 한 손실 함수의 변화도(gradient)에 따라 조정됨<br>
+- 이러한 변화도를 계산하기 위해 PyTorch에는 torch.autograd라고 불리는 자동 미분 엔진이 내장됨. 이는 모든 계산 그래프에 대한 변화도의 자동 계산을 지원 <br>
+- 입력 x, 매개변수 w와 b, 그리고 일부 손실 함수가 있는 가장 간단한 단일 계층 신경망을 가정. 
+
+```python
+import torch
+
+x = torch.ones(5)  # input tensor
+y = torch.zeros(3)  # expected output
+w = torch.randn(5, 3, requires_grad=True)
+b = torch.randn(3, requires_grad=True)
+z = torch.matmul(x, w)+b
+loss = torch.nn.functional.binary_cross_entropy_with_logits(z, y)
+
+# Tensor, Function과 연산그래프(Computational graph) - 손실 함수의 변화도를 계싼하기 위해서 requires_grad 속성 설정. 역방향 전파 함수에 대한 reference는 텐서의 grad_fn 속성에 저장됨. 
+print(f"Gradient function for z = {z.grad_fn}")
+print(f"Gradient function for loss = {loss.grad_fn}")
+
+# Gradient 계산하기 - 신경망에서 매개변수의 가중치를 최적화하려면 매개변수에 대한 손실함수의 derivative를 계산. 이 계산을 위해 loss.backward()를 호출한 다음 w.grad와 b.grad에서 값을 가져온다
+loss.backward()
+print(w.grad)
+print(b.grad)
+
+# 변화도 추적 멈추기 - requires_grad=True인 모든 텐서들은 연산 기록을 추적하고 변화도 계산을 지원함. 모델을 학습한 뒤 입력 데이터를 단순히 적용하기만 하는 경우와 같이 순전파 연산만 필요한 경우 이러한 추적이나 지원이 필요 없어서
+# 연산코드를 torch.no_grad() 블록으로 둘러싸서 연산 추적을 멈춘다
+z = torch.matmul(x, w)+b
+print(z.requires_grad)
+
+with torch.no_grad():
+    z = torch.matmul(x, w)+b
+print(z.requires_grad)
+# 동일한 결과를 얻는 다른 방법은 텐서에 detach() 메소드를 사용
+z = torch.matmul(x, w)+b
+z_det = z.detach()
+print(z_det.requires_grad)
+
+# 연산 그래프에 대한 추가정보 - autograd는 데이터(텐서)의 실행된 모든 연산들의 기록을 Runction_ 객체로 구성된 방향성 비순환 그래프(DAG; Directed Acyclic Graph)에 저장함. 
+# 이 방향선 비순환 그래프의 잎은 입력 텐서이고, 뿌리는 결과 텐서. 이 그래프를 뿌리에서부터 잎까지 추적하면 chain rule에 따라 변화도를 자동으로 계산
+
+# 순전파 단계에서 autograd는 2 가지 작업을 동시에 수행 - 1) 요청된 연산을 수행하여 결과 텐서를 계산, 2) DAG에 연산의 gradient function를 유지
+# 역전파 단계에서 DAG root에서, .backward() 가 호출될 때 시작됨. autograd는 이때, 1) 각 .grad_fn으로부터 변화도 계산 2) 각 텐서의 .grad 속성에 계산 결과를 쌓고(accumulate) 3) chain-rule 사용하여 모든 leaf 텐서들까지 전파
+
+
+# 선택적으로 읽기(Optional Reading) : 텐서 변화도와 야코비안 곱(Jacobian Product) : 대부분 스칼라 손실 함수를 가지고 일부 매개변수와 관련된 변화도를 계산해야 한다. 그러나 출력함수가 임의의 텐서인 경우, 실제 변화도가 아닌 Jacobian product를 계산
+# $\vec{x}=\langle x_1,\dots,x_n\rangle$\ 이고,$\vec{y}=\langle y_1,\dots,y_m\rangle$\ 일 때 벡터 함수 $\vec{y}=f(\vec{x})$\ 에서 $\vec{x}$\ 에 대한 $\vec{y}$ 의 변화도는 **야코비안 행렬(Jacobian matrix)**\ 로 주어집니다:
+inp = torch.eye(4, 5, requires_grad=True)
+out = (inp+1).pow(2).t()
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"First call\n{inp.grad}")
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"\nSecond call\n{inp.grad}")
+inp.grad.zero_()
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"\nCall after zeroing gradients\n{inp.grad}")
+```
+# 모델 매개변수 최적화하기 : 모델을 학습하는 과정 = 각 반복 단계에서 모델은 출력을 추측하고, 추측과 정답사이의 loss 계산하고, 매개변수에 대한 오류의 derivative를 수집한 뒤, gradient descent를 사용하여 파라미터를 최적화
+
+```python
+# 기본 코드
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+
+train_dataloader = DataLoader(training_data, batch_size=64)
+test_dataloader = DataLoader(test_data, batch_size=64)
+
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+
+model = NeuralNetwork()
+
+# Hyperparameter : 모델 최적화 과정을 제어할 수 있는 조절 가능한 매개변수. 서로 다른 하이퍼파라미터 값은 모델 학습과 수렴율(convergence rate)에 영향을 미칠 수 있음 
+# 학습 시에는 1) epoch 수 2) batch size (매개변수가 갱신되기 전 신경망을 통해 전파된 데이터 샘플의 수) 3) learning rate (각 배치/에폭에서 모델의 매개변수를 조절하느 비율. 값이 작을수록 학습 속도가 느려지고, 값이 크면 학습 중 예측할 수 없는 동작이 발생
+learning_rate = 1e-3
+batch_size = 64
+epochs = 5
+
+# Optimization loop : train loop = 학습용 데이터셋을 반복하고 최적의 매개변수로 수렴. validation/test loop = 모델 성능이 개선되고 있는지를 확인하기 위해 테스트 데이터셋을 반복
+# Loss function : 획득한 결과와 실제 값 사이의 틀린 정도 (degree of dissimilarity)를 측정하며, 이를 최소화하려고 함. ex) regression task - nn.MSELoss, classification - nn.NLLLoss (Negative Log Likelihood) 그리고 nn.LogSoftmax와 nn.NLLLoss 합친 nn.CrossEntropyLoss 등 있음
+# 손실 함수를 초기화합니다.
+loss_fn = nn.CrossEntropyLoss()
+
+# 옵티마이저 : 최적화 절차는 optimizer 객체에 캡슐화됨. PyTorch에는 ADAM이나 RMSProp과 같은 다른 종류의 모델과 데이터에서 더 잘 동작하는 다양한 옵티마이저가 있다
+# 학습하려는 모델의 매개변수와 학습률(learning rate) 하이퍼파라미터를 등록하여 옵티마이저를 초기화
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+# 학습 단계의 최적화느 3단계 - 1) optimizer.zero_grad() 호출하여 모델 매개변수의 변화도 재설정 2) loss.backwards() 호출하여 prediction loss 역전파. PyTorch는 각 매개변수에 대한 손실의 변화도를 저장 3) 변화도 계산 후 optimizer.step() 호출하여 역전파 단계에서 수집된 변화도로 매개변수 조정
+
+# 전체 구현
+def train_loop(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    # 모델을 학습(train) 모드로 설정합니다 - 배치 정규화(Batch Normalization) 및 드롭아웃(Dropout) 레이어들에 중요합니다.
+    # 이 예시에서는 없어도 되지만, 모범 사례를 위해 추가해두었습니다.
+    model.train()
+    for batch, (X, y) in enumerate(dataloader):
+        # 예측(prediction)과 손실(loss) 계산
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # 역전파
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), batch * batch_size + len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+
+def test_loop(dataloader, model, loss_fn):
+    # 모델을 평가(eval) 모드로 설정합니다 - 배치 정규화(Batch Normalization) 및 드롭아웃(Dropout) 레이어들에 중요합니다.
+    # 이 예시에서는 없어도 되지만, 모범 사례를 위해 추가해두었습니다.
+    model.eval()
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    test_loss, correct = 0, 0
+
+    # torch.no_grad()를 사용하여 테스트 시 변화도(gradient)를 계산하지 않도록 합니다.
+    # 이는 requires_grad=True로 설정된 텐서들의 불필요한 변화도 연산 및 메모리 사용량 또한 줄여줍니다.
+    with torch.no_grad():
+        for X, y in dataloader:
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+epochs = 10
+for t in range(epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    train_loop(train_dataloader, model, loss_fn, optimizer)
+    test_loop(test_dataloader, model, loss_fn)
+print("Done!")
+```
+
+# 모델 저장하고 불러오기
+
+```python
+import torch
+import torchvision.models as models
+
+# 모델 가중치 저장하고 불러오기 - 학습한 매개변수를 state_dict라고 불리는 내부 상태 사전에 저장. 이 상태 값들은 torch.save 메소드를 사용하여 저장
+model = models.vgg16(weights='IMAGENET1K_V1')
+torch.save(model.state_dict(), 'model_weights.pth')
+# 모델 가중치를 불러오기 위해서는 동일한 모델의 인스턴스 생성한 다음에 load_state_dict() 메소드를 사용해 매개변수를 불러온다
+model = models.vgg16() # 여기서는 ``weights`` 를 지정하지 않았으므로, 학습되지 않은 모델을 생성합니다.
+model.load_state_dict(torch.load('model_weights.pth'))
+model.eval()
+# inference하기 전에 model.eval() 메소드 호출해서 dropout과 batch normalization를 evaluation mode로 설정해야 함. 안그러면 일관성 없는 추론 결과가 생성
+# 모델의 형태 포함해서 저장하고 불러오기
+torch.save(model, 'model.pth')
+model = torch.load('model.pth')
+```
