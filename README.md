@@ -1,5 +1,15 @@
 # Papers-I-read
 
+recommended paper
+* Learning representations by back-propagating errors (Backpropagation)
+* A training algorithm for optimal margin classifiers
+* Bagging predictors
+* Random Forests (2001 Mahcine Learning)
+* Deep Learning (2015, Nature)
+* Dropout: A Simple Way to Prevent Neural Networks from Overfitting
+* Generative Adversarial Nets
+* Human-level control through deep reinforcement learning
+* Language Models are Few-Shot Learners
 Andrew Ng - Deep Learning specialization (https://developers.google.com/machine-learning/glossary?hl=ko#weight)
 
 fastcampus 강의<br>
