@@ -191,5 +191,135 @@ splits = text_splitter.split_documents(pages)
 vectorstore = Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings())
 retriever = vectorstore.as_retriever()
 
+def generate_answer(state):
+
+    print("---GENERATE ANSWER FROM RAG---")
+    messages = state["messages"] #함수 입력 값 state의 "messages"라는 키의 값을 messages에 할당
+    print("messages 내용 :",messages)
+    query = messages[-1].content # user query
+    system_prompt = (
+        """당신은 질문-답변을 담당하는 전문가 입니다. 다음 정보를 활용하여 질문에 답을 하시오.
+        모르면 모른다고 답하고, 답변은 간결하게 하시오.
+        {context}"""#retriever에서 나온 내용이 자동으로 {context}에 매핑
+    )
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ]
+    )
+
+    question_answer_chain = create_stuff_documents_chain(llm, prompt) #여러 개의 프롬프트를 하나로 합쳐서 LLM에 전달하는 체인을 생성하는 메서드
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain) #벡터스토어와 LLM을 연결하는 체인을 생성하는 메서드
+
+    print("Input query for RAG: ", query)
+
+    response = rag_chain.invoke({"input": query})
+    print(response)
+
+    return {"messages": [response['answer']]} #reponse의 answer 부분을 messages에 담기
+
+# workflow = StateGraph(AgentState) - StateGraph는 상태(노드)를 그래프로 관리하는 객체. 그래프가 State 구조를 기반으로 동작하도록 설정
+from langgraph.graph import END, StateGraph, START
+from langgraph.prebuilt import ToolNode
+
+# 그래프를 구성하기 위해 AgentState 클래스 기반으로 StateGraph 객체를 생성합니다.
+workflow = StateGraph(AgentState)
+
+## Node 추가
+# 그래프에 Node를 추가합니다.
+# add_node 함수의 첫 번째 인자는 Node의 이름입니다. (함수 이름과 달라도 됩니다)
+# Node의 이름은 특정 노드에서 다른 노드를 호출할 때 사용합니다.
+# 두 번째 인자는 Node가 호출될 때 실행될 함수입니다.
+workflow.add_node("rag", generate_answer)  # 답변 생성
+
+# 그래프 = Node + Edge로 구성. Node = 체인의 각 구성 요소에 대응하며, Agent, Tool, LLM 등 그래프의 각 구성요소를 의미. Edge = Node를 연결하는 요소
+workflow.add_edge(START, "rag")
+workflow.add_edge("rag", END)
+
+# compile하여 그래프의 아키텍쳐를 고정
+graph = workflow.compile()
+#오직 시각화 용도
+from IPython.display import Image, display
+
+display(Image(graph.get_graph(xray=True).draw_mermaid_png()))
+# 새 메세지를 계속 누적하기 때문에 리스트 형태로 입력한다.
+inputs = {
+    "messages": [
+        "what is the summary of the paper?? 한글로 설명해줘"
+    ]
+}
+output = graph.invoke(inputs)
+from langchain_core.tools import tool # LangChain에서 툴(함수)를 정의하는 데 사용되는 데코레이터.
+from langgraph.prebuilt import ToolNode # 여러 개의 툴을 하나의 노드로 묶어 관리하는 객체.
+from pprint import pprint # 결과를 보기 좋게 출력해주는 라이브러리
+
+# 만약 이전에 크로마DB를 사용했다면 cache로 인해 오류가 날 수 있습니다
+# 코드 진행 중 chromaDB로 인해 오류가 난다면 해당 cell을 실행하여 cache를 삭제해 주세요
+
+import chromadb.api
+
+chromadb.api.client.SharedSystemClient.clear_system_cache()
+
+# ToolNode 활용 : 정의된 Tool을 실행하는 RunnableCallable 컴포넌트. input을 통해 정해진 tool을 실행, output을 제공
+# tool이라는 magic function을 활용하여 사용할 툴을 인지
+# @tool을 통해 랭체인의 툴로 등록된다.
+
+@tool
+def get_weather(location: str):
+    """Call to get the current weather."""
+    if location.lower() in ["sf", "san francisco"]:
+        return "It's 20 degrees and foggy."
+    else:
+        return "It's 30 degrees and sunny."
+
+@tool
+def get_coolest_cities():
+    """Get a list of coolest cities"""
+    return "nyc, sf"
+
+# tool들을 tools라는 리스트에 저장
+tools = [get_weather, get_coolest_cities]
+
+#llm.bind_tools()을 쓰는 이유 tools 내에 여러 개의 함수 중 입력 프롬프트를 수행하는데 가장 필요한 함수를 llm이 판단하여 ToolNode()에 필요한 입력 값 형태로 출력 값을 출력해줍니다.
+llm_with_tools = llm.bind_tools(tools) #LLM이 정의된 툴을 사용할 수 있도록 설정.
+output = llm_with_tools.invoke("what's the weather in sf?")
+output.tool_calls
+
+# 다수의 tool을 갖고 있는 node가 생성되며, 인풋에 따라 사용할 tool 결정
+tool_node = ToolNode(tools)
+# Tool 실행 로직도 : tools = [a, b] -> (bind_tools() : llm을 이용하여 tools에서 프롬프트와 관련있는 함수를 실행하기 위한 output 생성). llm.bind_tools(tools) -> llm.bind_tools(tools.invoke("프롬프트")
+# ToolNode(tools) (ToolNode() : tools에 있는 함수를 실행시킴) -> ToolNode(tools).invoke({"messages":[]})
+
+@tool
+def build_and_retrieve(query: str):
+    """A knowledge base for retrieving information related to muscle gains""" # 함수를 설명하는 docstring
+    loader = PyPDFLoader("Maximizing Muscle Hypertrophy.pdf")
+    pages = loader.load_and_split()
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splits = text_splitter.split_documents(pages)
+
+    vectorstore = Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings())
+    retriever = vectorstore.as_retriever()
+    return retriever.invoke(query)
+
+@tool
+def get_weather(location: str):
+    """Call to get the current weather."""
+    if location.lower() in ["sf", "san francisco"]:
+        return "It's 20 degrees and foggy."
+    else:
+        return "It's 30 degrees and sunny."
+
+@tool
+def get_coolest_cities():
+    """Get a list of coolest cities"""
+    return "nyc, sf"
+
+tools = [build_and_retrieve, get_weather, get_coolest_cities]
+tool_node = ToolNode(tools)
+
 
 ```
