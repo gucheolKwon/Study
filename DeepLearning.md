@@ -120,3 +120,297 @@
 **추가 참고**  
 - Mikolov et al., “Efficient Estimation of Word Representations in Vector Space”, 2013.  
 - Jurafsky & Martin, *Speech and Language Processing*, 3rd ed., Chapter on Word Embeddings.
+
+
+
+# PyTorch 튜토리얼
+
+## 목차
+1. [텐서 생성과 기본 연산](#1-텐서-생성과-기본-연산)  
+2. [GPU 가속 활용](#2-gpu-가속-활용)  
+3. [자동 미분 Autograd](#3-자동-미분-autograd)  
+4. [신경망 모델 정의](#4-신경망-모델-정의)  
+5. [데이터 로더 활용](#5-데이터-로더-활용)  
+6. [손실 함수와 최적화](#6-손실-함수와-최적화)  
+7. [모델 학습 루프](#7-모델-학습-루프)  
+8. [모델 평가와 예측](#8-모델-평가와-예측)  
+9. [학습률 스케줄러](#9-학습률-스케줄러)  
+10. [모델 저장과 로드](#10-모델-저장과-로드)  
+11. [커스텀 데이터셋 생성](#11-커스텀-데이터셋-생성)  
+12. [전이 학습 활용](#12-전이-학습-활용)  
+
+---
+
+### 1. 텐서 생성과 기본 연산
+**개요**  
+PyTorch의 핵심 자료구조인 텐서를 생성하고 기본적인 수학 연산을 수행하는 방법입니다.
+
+**코드 예제**
+```python
+import torch
+
+# 텐서 생성
+x = torch.tensor([[1, 2], [3, 4]], dtype=torch.float32)
+y = torch.ones(2, 2)
+
+# 기본 연산
+result = x + y
+print(result)  # tensor([[2., 3.],
+               #         [4., 5.]])
+```
+
+**설명**  
+`torch.tensor()` 로 데이터를 텐서로 변환하고, NumPy처럼 직관적인 연산이 가능합니다. GPU 가속을 위한 기본 단위입니다.
+
+---
+
+### 2. GPU 가속 활용
+**개요**  
+CUDA를 이용해 텐서를 GPU로 이동시켜 연산 속도를 대폭 향상시키는 방법입니다.
+
+**코드 예제**
+```python
+import torch
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+x = torch.randn(1000, 1000).to(device)
+y = torch.randn(1000, 1000).to(device)
+
+result = torch.mm(x, y)  # GPU에서 행렬 곱셈
+print(f"Device: {result.device}")
+```
+
+**설명**  
+`.to(device)` 로 텐서를 GPU/CPU로 이동시킵니다. 대규모 행렬 연산에서 GPU는 CPU 대비 수십 배 빠릅니다.
+
+---
+
+### 3. 자동 미분 Autograd
+**개요**  
+역전파를 위한 자동 미분 기능으로, 신경망 학습의 핵심 메커니즘입니다.
+
+**코드 예제**
+```python
+import torch
+
+x = torch.tensor(2.0, requires_grad=True)
+y = x ** 3 + 2 * x ** 2 + x
+
+y.backward()  # dy/dx 계산
+print(f"Gradient: {x.grad}")  # 3*4 + 2*2*2 + 1 = 21
+```
+
+**설명**  
+`requires_grad=True` 로 미분 추적을 활성화하고, `backward()` 로 그래디언트를 자동 계산합니다. 복잡한 수식도 자동으로 처리됩니다.
+
+---
+
+### 4. 신경망 모델 정의
+**개요**  
+`nn.Module` 을 상속받아 커스텀 신경망을 정의하는 표준 방법입니다.
+
+**코드 예제**
+```python
+import torch.nn as nn
+
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(784, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        return self.fc2(x)
+```
+
+**설명**  
+`__init__` 에서 레이어를 정의하고 `forward` 에서 순전파 로직을 구현합니다. 역전파는 autograd가 자동 처리합니다.
+
+---
+
+### 5. 데이터 로더 활용
+**개요**  
+대용량 데이터를 배치 단위로 효율적으로 로드하고 셔플하는 방법입니다.
+
+**코드 예제**
+```python
+from torch.utils.data import DataLoader, TensorDataset
+import torch
+
+X = torch.randn(1000, 20)
+y = torch.randint(0, 2, (1000,))
+
+dataset = TensorDataset(X, y)
+loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+for batch_X, batch_y in loader:
+    print(batch_X.shape)  # torch.Size([32, 20])
+```
+
+**설명**  
+`TensorDataset` 으로 데이터를 묶고 `DataLoader` 로 배치 처리합니다. `shuffle=True` 로 에폭마다 데이터 순서를 섞어 학습 효과를 높입니다.
+
+---
+
+### 6. 손실 함수와 최적화
+**개요**  
+모델 학습을 위한 손실 함수 계산과 옵티마이저 사용법입니다.
+
+**코드 예제**
+```python
+import torch.nn as nn
+import torch.optim as optim
+
+model = SimpleNet()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+output = model(torch.randn(10, 784))
+loss = criterion(output, torch.randint(0, 10, (10,)))
+
+optimizer.zero_grad()
+loss.backward()
+optimizer.step()
+```
+
+**설명**  
+`CrossEntropyLoss` 로 분류 손실을 계산하고, `Adam` 옵티마이저로 가중치를 업데이트합니다. `zero_grad()` 로 그래디언트 초기화가 필수입니다.
+
+---
+
+### 7. 모델 학습 루프
+**개요**  
+전체 학습 과정을 포함한 완전한 트레이닝 루프 구현입니다.
+
+**코드 예제**
+```python
+model.train()
+for epoch in range(10):
+    total_loss = 0
+    for X_batch, y_batch in loader:
+        optimizer.zero_grad()
+        output = model(X_batch)
+        loss = criterion(output, y_batch)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    print(f"Epoch {epoch}: Loss {total_loss:.4f}")
+```
+
+**설명**  
+`model.train()` 으로 학습 모드 활성화 후, 배치별로 순전파 → 손실 계산 → 역전파 → 가중치 업데이트를 반복합니다.
+
+---
+
+### 8. 모델 평가와 예측
+**개요**  
+학습된 모델로 새로운 데이터에 대한 예측을 수행하는 방법입니다.
+
+**코드 예제**
+```python
+model.eval()
+with torch.no_grad():
+    test_input = torch.randn(5, 784)
+    predictions = model(test_input)
+    predicted_classes = torch.argmax(predictions, dim=1)
+
+print(predicted_classes)  # 예: tensor([7, 2, 0, 4, 9])
+```
+
+**설명**  
+`model.eval()` 과 `torch.no_grad()` 로 그래디언트 계산을 비활성화해 메모리를 절약합니다. `argmax` 로 가장 높은 확률의 클래스를 선택합니다.
+
+---
+
+### 9. 학습률 스케줄러
+**개요**  
+학습 진행에 따라 학습률을 동적으로 조정하여 수렴 성능을 개선합니다.
+
+**코드 예제**
+```python
+from torch.optim.lr_scheduler import StepLR
+
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+
+for epoch in range(20):
+    # ... 학습 코드 ...
+    scheduler.step()
+    print(f"LR: {optimizer.param_groups[0]['lr']:.6f}")
+```
+
+**설명**  
+`StepLR` 은 `step_size` 에폭마다 학습률을 `gamma` 배로 감소시킵니다. 초반엔 빠르게 학습하고 후반엔 세밀하게 조정합니다.
+
+---
+
+### 10. 모델 저장과 로드
+**개요**  
+학습된 모델의 가중치를 저장하고 나중에 불러오는 방법입니다.
+
+**코드 예제**
+```python
+# 저장
+torch.save(model.state_dict(), 'model_weights.pth')
+
+# 로드
+model = SimpleNet()
+model.load_state_dict(torch.load('model_weights.pth'))
+model.eval()
+```
+
+**설명**  
+`state_dict()` 로 모델의 파라미터만 저장하는 것이 권장됩니다. 전체 모델을 저장하는 것보다 유연하고 호환성이 좋습니다.
+
+---
+
+### 11. 커스텀 데이터셋 생성
+**개요**  
+자신만의 데이터를 PyTorch `Dataset` 으로 변환하여 표준 파이프라인에 통합합니다.
+
+**코드 예제**
+```python
+from torch.utils.data import Dataset
+
+class CustomDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx], self.labels[idx]
+```
+
+**설명**  
+`Dataset` 클래스를 상속받아 `__len__` 과 `__getitem__` 만 구현하면 됩니다. `DataLoader` 와 함께 사용해 표준화된 데이터 처리가 가능합니다.
+
+---
+
+### 12. 전이 학습 활용
+**개요**  
+사전 학습된 모델을 가져와 마지막 레이어만 교체하여 새로운 태스크에 적용합니다.
+
+**코드 예제**
+```python
+import torchvision.models as models
+import torch.nn as nn
+
+resnet = models.resnet18(pretrained=True)
+
+# 마지막 레이어만 교체
+num_features = resnet.fc.in_features
+resnet.fc = nn.Linear(num_features, 10)
+
+# 사전 학습 레이어는 고정
+for param in resnet.parameters():
+    param.requires_grad = False
+resnet.fc.requires_grad = True
+```
+
+**설명**  
+ImageNet 으로 학습된 ResNet을 가져와 분류기만 교체합니다. 적은 데이터로도 높은 성능을 얻을 수 있는 강력한 기법입니다.
