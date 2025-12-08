@@ -61,3 +61,58 @@ $$ \min_{\theta \in \Theta} E_{x \sim p_{data}} [e(x, \emptyset, \theta) - R(\th
 1.  **Parametrization (파라미터화)**: 에너지 함수 $e$를 정의하는 단계
 2.  **Learning (학습)**: 데이터로부터 파라미터 $\theta$를 추정하는 단계 (에너지 지형 형성)
 3.  **Inference (추론)**: 부분적인 관측값이 주어졌을 때, 에너지를 최소화하는 결측값(출력 또는 잠재변수)을 찾는 단계
+
+## 1. EBM에서의 분류 (Classification Setup)
+에너지 기반 모델에서 분류 문제는 관측값 $x$를 입력과 출력 $[x, y]$로 나누는 것입니다. 여기서 $y$는 유한한 카테고리 집합 $Y$에 속하며, 잠재 변수는 없다고 가정합니다($Z = \emptyset$).
+
+### 추론 (Inference)
+가장 낮은 에너지를 가진 카테고리를 선택합니다:
+$$ \hat{y}(x) = \arg \min_{y \in Y} e([x, y], \emptyset, \theta) $$
+
+### 효율적인 파라미터화 (Parametrization)
+에너지 계산의 효율성을 위해(병렬 계산 등), 특징 추출기 $f(x, \theta)$와 원-핫 벡터 $\mathbf{1}(y)$를 사용하여 에너지를 정의합니다:
+$$ e([x, y], \emptyset, \theta) = \mathbf{1}(y)^\top f(x, \theta) $$
+*   **선형 분류기 (Linear Classifier)**: $f(x, \theta) = Wx + b$인 경우 ($\theta = (W, b)$).
+
+## 2. 학습을 위한 손실 함수 (Loss Functions)
+학습은 훈련 데이터셋 $D = \{[x^n, y^n]\}_{n=1}^N$에 대한 평균 손실 함수를 최소화하는 과정입니다.
+
+### Zero-One (0-1) Loss의 한계
+이상적인 목표는 **0-1 손실**을 최소화하는 것입니다:
+$$ L_{0-1}([x, y], \theta) = \mathbf{1}(y \neq \hat{y}(x)) $$
+*   **문제점**: 이 함수는 계단형 상수 함수(piece-wise constant)이므로 미분값이 대부분 0입니다. 따라서 경사 하강법을 사용할 수 없으며 난해한 블랙박스 최적화가 필요합니다.
+
+### 대리 손실 함수 (Proxy Loss Functions)
+미분 가능한 대리 손실 함수를 사용하여 이를 해결합니다.
+
+#### 1. 마진 손실 (Margin Loss / Hinge Loss)
+정답 $y$의 에너지가 오답 중 가장 에너지가 낮은 $\hat{y}'$보다 적어도 마진 $m$만큼 더 낮도록 강제합니다.
+$$ L_{margin}([x, y], \theta) = \max(0, m + e([x, y], \emptyset, \theta) - e([x, \hat{y}'], \emptyset, \theta)) $$
+*   **SVM**: 서포트 벡터 머신(Support Vector Machine)의 핵심 원리입니다.
+
+#### 2. 퍼셉트론 손실 (Perceptron Loss)
+마진 손실에서 $m=0$인 특수 경우입니다.
+$$ L_{perceptron}([x, y], \theta) = \max(0, e([x, y], \emptyset, \theta) - e([x, \hat{y}'], \emptyset, \theta)) $$
+*   **특징**: 예측이 틀렸을 때만($y \neq \hat{y}$) 파라미터를 업데이트합니다. 정답이면 손실은 0입니다.
+
+## 3. 확률적 접근: 소프트맥스와 교차 엔트로피
+**최대 엔트로피 원리(Principle of Maximum Entropy)**를 사용하여 에너지 값을 확률로 변환할 수 있습니다.
+
+### 소프트맥스 변환 (Softmax)
+에너지를 카테고리 확률 $p_\theta(y|x)$로 변환:
+$$ p_\theta(y|x) = \frac{\exp(-e([x, y], \emptyset, \theta))}{\sum_{y' \in Y} \exp(-e([x, y'], \emptyset, \theta))} $$
+
+### 교차 엔트로피 손실 (Cross-Entropy / Negative Log-Likelihood)
+$$ L_{ce}([x, y], \theta) = -\log p_\theta(y|x) = e([x, y], \emptyset, \theta) + \log \sum_{y' \in Y} \exp(-e([x, y'], \emptyset, \theta)) $$
+
+### 기울기 분석 (Boltzmann Machine Learning)
+교차 엔트로피 손실의 기울기(Gradient)는 학습의 동역학을 보여줍니다:
+$$ \nabla_\theta L_{ce} = \underbrace{\nabla_\theta e([x, y], \emptyset, \theta)}_{\text{Positive Phase}} - \underbrace{E_{y|x;\theta}[\nabla_\theta e([x, y'], \emptyset, \theta)]}_{\text{Negative Phase}} $$
+*   **Positive Phase**: 정답 $y$의 에너지를 높이는 방향 (손실 최소화 과정에서 부호가 반전되어 에너지를 낮춤).
+*   **Negative Phase**: 현재 모델의 확률 분포에 따라 가중된 다른 모든 라벨의 에너지를 낮추는 방향 (실제로는 에너지를 높여 정답과 격차를 벌림).
+
+### 퍼셉트론과의 연결
+소프트맥스 함수에서 역온도(inverse temperature) $\beta \to \infty$가 되면:
+*   Negative Phase 항이 예측된 클래스 $\hat{y}$의 에너지에 지배됩니다.
+*   만약 $\hat{y} = y$라면 기울기가 상쇄되어 업데이트가 발생하지 않습니다.
+*   이는 퍼셉트론 손실의 동작과 일치하게 됩니다.
