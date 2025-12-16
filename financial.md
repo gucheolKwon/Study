@@ -122,3 +122,36 @@ AI 투자전략 : 26년은 Agentic AI (산업별 적용 분야 확산)
   -> S&P500 적립 투자 = 성공투자의 공식
   : 20년간 매월 100만원 적립 가정 시, 누적원금 2.4억원, 평가액 7.9억원
 
+ETF : 주식과 펀드의 장점을 결합한 하이브리드형 상품
+(Easy, Trend, Fee&Fast)
+- 국내 ETF 시장 현황 : 운용규모 276조원, 상품 수 1039개
+
+
+연금투자
+- IRP & 개인연금 포트폴리오 상품
+-> 핵심 (Core) : 대표지수 ETF로 장기투자 ex) 미국S&P500, 미국나스닥100
+-> 위성(satellite) : 장기 성장 테마로 추가수익추구 ex) 미국AI전력핵심인프라, 미국휴머노이드로봇, 미국AI소프트웨어TOP10, 차이나휴머노이드로봇
+
+1) 20~30세 : 성장성 높은 미국 주식 투자
+"30년 이상 투자할 수 있는, 20대에는 장기 성장 테마를 중심으로 투자" 
+-> ex. AI테마 ETF에 집중한 포트폴리오
+
+2) 30~40세 : 자산증식 골든타임, 전략적 투자 Upgrade
+"순수입이 빠르게 증가하는 30대에는 AI테마와 대표지수의 조화"
+-> ex) 미국주식 중심이면서 AI테마 중 상대적으로 매출이 빠르게 발생하는 AI전력, 소프트웨어 중심 포트폴리오
+   
+4) 40~50세 : 지키는 투자, 성장과 안정의 적절한 줄다리기
+"은퇴가 가까워져 오니, 월배당 포트폴리오 비중을 늘려가기"
+
+5) 50~60세 : 평생 소득만들기, 똑똑한 연금인출기 전략
+"은퇴자산을 최대한 오래 쓰기 위해 주식형 ETF 투자는 계속하자"
+-> ex) 금과 채권으로 은퇴자산 배분
+
+[대표적인 ETF 소개]
+1. Kodex 미국S&P500
+2. Kodex 미국나스닥100 : 100개 기업 & 테크놀로지 섹터 중심으로 구성
+3. Kodex 미국AI테크TOP10 : 글로벌 AI 시장을 이끄는 미국 빅테크 대표 10개 기업 : Nvidia, Microsoft, Apple, Alphabet, Meta, Tesla, Amazon, Broadcom, TSMC, Palantir
+4. Kodex 미국AI전력핵심인프라 : 전력 인프라 핵심10종목 : GE Vernova, Constellation Energy, Arista .. etc
+5. Kodex 미국서학개미 : 서학개미가 가장 많이 투자하는 미국 주식 25개 종목 집중 투자 : Tesla, Nvidia, Palantir, Apple, IONQ, Alphabet, Microsoft, Broadcom, Amazon, Meta, Berkshire Hathaway, Strategy, Nuscale, UnitedHealth, TSMC, Joby, Realty Income, BitMine, Alphabet C, AMD
+6. Kodex 200타겟위클리커버드콜 : 코스피 200 투자 + 코스피 200 콜옵션 매도 (연 "15%+a" 분배율 추구)
+7. Kodex TDF ETF 시리즈 : TDF(Target Date Fund) : 투자자의 은퇴 시점에 맞춰 자산을 알아서 운용해주는 펀드. 퇴직연금 100% 투자도 가능함
